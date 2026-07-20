@@ -1,8 +1,18 @@
+
+
+
+
 # Pr0mt_X Text
 
 Pr0mt_X Text is a lightweight native Windows app for sending text to ChatGPT with reusable prompt presets. It began as a grammar helper and now works with any text-based prompt workflow.
 
 The app does not require an API key. It prepares the selected prompt and text, then opens a temporary ChatGPT conversation in the user's default browser.
+
+DISCLAIMER: This app was built with the help of ChatGPT and Codex. If you do not like vibe coded programs, do not use it.
+The app has no known bugs. If you find any issues, please report them and I will do my best to fix them. You are also welcome to suggest new features.
+I created this app for myself because I have dyslexia and have always struggled with grammar. At first, I made a simple Python app that opened the browser and pasted a pre made prompt into a temporary ChatGPT chat. Later, I used Codex to recreate the entire app with more features and a better UI.
+I use this app almost every day.
+
 
 ## Features
 

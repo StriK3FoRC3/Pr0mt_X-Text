@@ -1,0 +1,32 @@
+# Build output
+/build/
+/out/
+/cmake-build-*/
+
+# CMake and Visual Studio
+CMakeUserPresets.json
+/.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Compiled files
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.res
+
+# Local application data
+presets.dat
+settings.dat
+history.dat
+
+# Editor and OS files
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini

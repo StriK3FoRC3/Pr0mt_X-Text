@@ -21,6 +21,10 @@ The app does not require an API key. It prepares the selected prompt and text, t
 - A web browser and a ChatGPT account
 - For building: CMake 3.16 or newer and Visual Studio Build Tools with the Desktop development with C++ workload
 
+## Download
+
+Download the current Windows executable from the [latest GitHub release](https://github.com/StriK3FoRC3/Pr0mt_X-Text/releases/latest). No installation is required.
+
 ## Build
 
 Run `build.bat` from the project directory. The release executable will be created at:

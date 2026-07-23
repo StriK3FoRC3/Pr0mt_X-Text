@@ -1,4 +1,4 @@
-https://i.ibb.co/gZvqWsPL/asfsdfsdf.png
+![Settings Window](https://raw.github.com/StriK3FoRC3/Pr0mt_X-Text/master/app-screenshot.png)
 
 
 

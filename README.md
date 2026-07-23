@@ -1,6 +1,3 @@
-![Settings Window](https://raw.github.com/StriK3FoRC3/Pr0mt_X-Text/master/app-screenshot.png)
-
-
 <div align="center">
     <img src="/app-screenshot.png" width="400px"</img> 
 </div>

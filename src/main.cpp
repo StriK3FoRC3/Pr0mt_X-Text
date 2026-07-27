@@ -49,6 +49,8 @@ static constexpr int ID_EDITOR_UP = 2008;
 static constexpr int ID_EDITOR_DOWN = 2009;
 static constexpr int MAX_PRESET_NAME_LENGTH = 30;
 static constexpr int EDITOR_PRESET_ROW_HEIGHT = 24;
+static constexpr LONG_PTR BUTTON_COLOR_MASK = 0x00FFFFFF;
+static constexpr LONG_PTR BUTTON_HOVERED = 0x01000000;
 
 static const COLORREF COLOR_BG = RGB(25, 25, 25);
 static const COLORREF COLOR_PANEL = RGB(35, 35, 35);
@@ -213,6 +215,40 @@ static void SetAppFont(HWND hwnd) {
 
 static void SetButtonFont(HWND hwnd) {
     SendMessageW(hwnd, WM_SETFONT, (WPARAM)g_buttonFont, TRUE);
+}
+
+static COLORREF BlendColor(COLORREF from, COLORREF to, double amount) {
+    amount = std::clamp(amount, 0.0, 1.0);
+    auto blendChannel = [amount](BYTE start, BYTE end) {
+        return static_cast<BYTE>(start + (end - start) * amount);
+    };
+    return RGB(
+        blendChannel(GetRValue(from), GetRValue(to)),
+        blendChannel(GetGValue(from), GetGValue(to)),
+        blendChannel(GetBValue(from), GetBValue(to)));
+}
+
+static LRESULT CALLBACK ButtonHoverSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR, DWORD_PTR) {
+    if (msg == WM_MOUSEMOVE) {
+        LONG_PTR state = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        if ((state & BUTTON_HOVERED) == 0) {
+            TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, hwnd, 0};
+            TrackMouseEvent(&tracking);
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, state | BUTTON_HOVERED);
+            InvalidateRect(hwnd, nullptr, FALSE);
+        }
+    } else if (msg == WM_MOUSELEAVE) {
+        LONG_PTR state = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, state & ~BUTTON_HOVERED);
+        InvalidateRect(hwnd, nullptr, FALSE);
+    } else if (msg == WM_SETCURSOR && LOWORD(lp) == HTCLIENT) {
+        SetCursor(LoadCursorW(nullptr, IDC_HAND));
+        return TRUE;
+    } else if (msg == WM_NCDESTROY) {
+        RemoveWindowSubclass(hwnd, ButtonHoverSubclassProc, 1);
+    }
+
+    return DefSubclassProc(hwnd, msg, wp, lp);
 }
 
 static LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR, DWORD_PTR) {
@@ -456,6 +492,7 @@ static HWND MakeLabel(HWND parent, const wchar_t* text, int x, int y, int w, int
 static HWND MakeButton(HWND parent, const wchar_t* text, int id, int x, int y, int w, int h, COLORREF color, bool settings = false) {
     HWND hwnd = CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, x, y, w, h, parent, (HMENU)(INT_PTR)id, g_instance, nullptr);
     SetWindowLongPtrW(hwnd, GWLP_USERDATA, static_cast<LONG_PTR>(color));
+    SetWindowSubclass(hwnd, ButtonHoverSubclassProc, 1, 0);
     SetButtonFont(hwnd);
     (settings ? g_settingsControls : g_promptControls).push_back(hwnd);
     return hwnd;
@@ -464,22 +501,30 @@ static HWND MakeButton(HWND parent, const wchar_t* text, int id, int x, int y, i
 static HWND MakeUntrackedButton(HWND parent, const wchar_t* text, int id, int x, int y, int w, int h, COLORREF color) {
     HWND hwnd = CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, x, y, w, h, parent, (HMENU)(INT_PTR)id, g_instance, nullptr);
     SetWindowLongPtrW(hwnd, GWLP_USERDATA, static_cast<LONG_PTR>(color));
+    SetWindowSubclass(hwnd, ButtonHoverSubclassProc, 1, 0);
     SetButtonFont(hwnd);
     return hwnd;
 }
 
 static void DrawButton(const DRAWITEMSTRUCT* item) {
-    COLORREF outline = static_cast<COLORREF>(GetWindowLongPtrW(item->hwndItem, GWLP_USERDATA));
+    LONG_PTR buttonState = GetWindowLongPtrW(item->hwndItem, GWLP_USERDATA);
+    COLORREF outline = static_cast<COLORREF>(buttonState & BUTTON_COLOR_MASK);
+    bool hovered = (buttonState & BUTTON_HOVERED) != 0;
     bool isTab = item->CtlID == ID_TAB_PROMPT || item->CtlID == ID_TAB_SETTINGS;
     bool selectedTab = (item->CtlID == ID_TAB_PROMPT && g_activeTab == 0) || (item->CtlID == ID_TAB_SETTINGS && g_activeTab == 1);
     if (item->CtlID == ID_HISTORY_ENABLED) outline = g_saveHistory ? COLOR_GREEN : COLOR_RED;
     if (isTab && !selectedTab) outline = COLOR_BORDER;
-    if (item->itemState & ODS_SELECTED) {
-        outline = RGB(std::min(255, GetRValue(outline) + 34), std::min(255, GetGValue(outline) + 34), std::min(255, GetBValue(outline) + 34));
+    COLORREF fillColor = isTab && selectedTab ? COLOR_PANEL : COLOR_BG;
+    if (hovered && (item->itemState & ODS_DISABLED) == 0) {
+        fillColor = BlendColor(fillColor, outline, 0.08);
+    }
+    if ((item->itemState & ODS_SELECTED) && (item->itemState & ODS_DISABLED) == 0) {
+        fillColor = BlendColor(fillColor, outline, 0.18);
+        outline = BlendColor(outline, COLOR_TEXT, 0.25);
     }
 
     FillRect(item->hDC, &item->rcItem, g_bgBrush);
-    HBRUSH brush = CreateSolidBrush(isTab && selectedTab ? COLOR_PANEL : COLOR_BG);
+    HBRUSH brush = CreateSolidBrush(fillColor);
     HPEN pen = CreatePen(PS_SOLID, selectedTab ? 2 : 1, outline);
     HGDIOBJ oldBrush = SelectObject(item->hDC, brush);
     HGDIOBJ oldPen = SelectObject(item->hDC, pen);

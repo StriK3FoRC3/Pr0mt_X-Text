@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Pr0mtXText VERSION 1.0.0 LANGUAGES CXX)
+project(Pr0mtXText VERSION 1.0.1 LANGUAGES CXX)
 
 if(NOT WIN32)
     message(FATAL_ERROR "Pr0mt_X Text is a native Windows application.")
